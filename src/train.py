@@ -38,6 +38,7 @@ import argparse
 import signal
 import string
 import random
+import os
 
 
 class GracefulKiller:
@@ -320,6 +321,8 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
 
 
 if __name__ == "__main__":
+    os.environ["OMP_NUM_THREADS"] = "1"
+    
     parser = argparse.ArgumentParser(description=('Train policy on OpenAI Gym environment '
                                                   'using Proximal Policy Optimizer'))
     parser.add_argument('env_name', type=str, help='OpenAI Gym environment name')
