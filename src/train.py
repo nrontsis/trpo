@@ -36,6 +36,8 @@ from datetime import datetime
 import os
 import argparse
 import signal
+import string
+import random
 
 
 class GracefulKiller:
@@ -260,7 +262,11 @@ def log_batch_stats(observes, actions, advantages, disc_sum_rew, logger, episode
                 })
 
 
-def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, policy_logvar):
+def id_generator(size=4, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))
+
+
+def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, policy_logvar, save):
     """ Main training loop
 
     Args:
@@ -277,9 +283,10 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
     env, obs_dim, act_dim = init_gym(env_name)
     obs_dim += 1  # add 1 to obs dimension for time step feature (see run_episode())
     now = datetime.utcnow().strftime("%b-%d_%H:%M:%S")  # create unique directories
-    logger = Logger(logname=env_name, now=now)
-    aigym_path = os.path.join('/tmp', env_name, now)
-    env = wrappers.Monitor(env, aigym_path, force=True)
+    env_id = env_name + id_generator()
+    logger = Logger(logname=env_id, now=now)
+    aigym_path = os.path.join('/tmp', env_id)
+    env = wrappers.Monitor(env, aigym_path, force=True, video_callable=lambda episode_id: False)
     scaler = Scaler(obs_dim)
     val_func = NNValueFunction(obs_dim, hid1_mult)
     policy = Policy(obs_dim, act_dim, kl_targ, hid1_mult, policy_logvar)
@@ -298,6 +305,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         log_batch_stats(observes, actions, advantages, disc_sum_rew, logger, episode)
         policy.update(observes, actions, advantages, logger)  # update policy
         val_func.fit(observes, disc_sum_rew, logger)  # update value function
+        mean_reward = logger.log_entry['_MeanReward']
         logger.write(display=True)  # write logger results to file and stdout
         if killer.kill_now:
             if input('Terminate training (y/[n])? ') == 'y':
@@ -306,6 +314,9 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
     logger.close()
     policy.close_sess()
     val_func.close_sess()
+
+    np.savetxt(save, np.array([mean_reward]))
+
 
 
 if __name__ == "__main__":
@@ -329,6 +340,8 @@ if __name__ == "__main__":
     parser.add_argument('-v', '--policy_logvar', type=float,
                         help='Initial policy log-variance (natural log of variance)',
                         default=-1.0)
+    parser.add_argument('-s', '--save', default='tmp.txt')
+
 
     args = parser.parse_args()
     main(**vars(args))
