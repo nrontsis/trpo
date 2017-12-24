@@ -38,6 +38,8 @@ import argparse
 import signal
 import string
 import random
+import collections
+import time
 
 
 class GracefulKiller:
@@ -293,6 +295,15 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
     # run a few episodes of untrained policy to initialize scaler:
     run_policy(env, policy, scaler, logger, episodes=5)
     episode = 0
+
+    if env_name == 'Swimmer-v1':
+        score_window = 100
+        solution_score = 360
+    else:
+        assert False
+
+    assert score_window % batch_size == 0
+    rewards = collections.deque(maxlen=score_window//batch_size)
     while episode < num_episodes:
         trajectories = run_policy(env, policy, scaler, logger, episodes=batch_size)
         episode += len(trajectories)
@@ -311,12 +322,17 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
             if input('Terminate training (y/[n])? ') == 'y':
                 break
             killer.kill_now = False
+
+        rewards.append(mean_reward)
+        if np.mean(rewards) >= solution_score:
+            episode = episode - score_window
+            break
+
     logger.close()
     policy.close_sess()
     val_func.close_sess()
 
-    np.savetxt(save, np.array([mean_reward]))
-
+    return episode
 
 
 if __name__ == "__main__":
@@ -342,6 +358,15 @@ if __name__ == "__main__":
                         default=-1.0)
     parser.add_argument('-s', '--save', default='tmp.txt')
 
-
     args = parser.parse_args()
-    main(**vars(args))
+
+    start = time.time()
+    e = []
+    for i in range(5):
+        e.append(main(**vars(args)))
+    end = time.time()
+    print('Done in:', (end - start) / 60, 'mins.')
+    final_score = np.min(np.asarray(e))  # Final score (lower is better)
+    print('Final score:', final_score)
+
+    np.savetxt(args.save, np.array([final_score]))
