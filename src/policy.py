@@ -155,7 +155,10 @@ class Policy(object):
 
     def _init_session(self):
         """Launch TensorFlow session and initialize variables"""
-        self.sess = tf.Session(graph=self.g)
+        session_conf = tf.ConfigProto(
+            intra_op_parallelism_threads=1,
+            inter_op_parallelism_threads=1)
+        self.sess = tf.Session(graph=self.g, config=session_conf)
         self.sess.run(self.init)
 
     def sample(self, obs):

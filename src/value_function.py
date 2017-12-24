@@ -24,7 +24,10 @@ class NNValueFunction(object):
         self.epochs = 10
         self.lr = None  # learning rate set in _build_graph()
         self._build_graph()
-        self.sess = tf.Session(graph=self.g)
+        session_conf = tf.ConfigProto(
+            intra_op_parallelism_threads=1,
+            inter_op_parallelism_threads=1)
+        self.sess = tf.Session(graph=self.g, config=session_conf)
         self.sess.run(self.init)
 
     def _build_graph(self):
@@ -59,7 +62,10 @@ class NNValueFunction(object):
             optimizer = tf.train.AdamOptimizer(self.lr)
             self.train_op = optimizer.minimize(self.loss)
             self.init = tf.global_variables_initializer()
-        self.sess = tf.Session(graph=self.g)
+        session_conf = tf.ConfigProto(
+            intra_op_parallelism_threads=1,
+            inter_op_parallelism_threads=1)
+        self.sess = tf.Session(graph=self.g, config=session_conf)
         self.sess.run(self.init)
 
     def fit(self, x, y, logger):
