@@ -300,6 +300,9 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
     if env_name == 'Swimmer-v1':
         score_window = 100
         solution_score = 360
+    elif env_name == 'HalfCheetah-v1':
+        score_window = 100
+        solution_score = 4800
     else:
         assert False
 
@@ -369,7 +372,7 @@ if __name__ == "__main__":
         e.append(main(**vars(args)))
     end = time.time()
     print('Done in:', (end - start) / 60, 'mins.')
-    final_score = np.min(np.asarray(e))  # Final score (lower is better)
+    final_score = np.mean(np.asarray(e))  # Final score (lower is better)
     print('Final score:', final_score)
 
     np.savetxt(args.save, np.array([final_score]))
