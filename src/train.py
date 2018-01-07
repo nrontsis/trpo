@@ -306,8 +306,8 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
     else:
         assert False
 
-    assert score_window % batch_size == 0
-    rewards = collections.deque(maxlen=score_window//batch_size)
+    # assert score_window % batch_size == 0
+    rewards = collections.deque(maxlen=int(np.rint(score_window/batch_size)))
     while episode < num_episodes:
         trajectories = run_policy(env, policy, scaler, logger, episodes=batch_size)
         episode += len(trajectories)
